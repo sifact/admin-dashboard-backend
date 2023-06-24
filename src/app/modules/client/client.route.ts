@@ -1,10 +1,10 @@
 import express from "express";
 
-import { getUsers } from "./client.controller";
+import { getGeography } from "./client.controller";
 
 const router = express.Router();
 
 // get users
-router.get("/", getUsers);
+router.get("/", getGeography);
 
 export const ClientRoutes = router;

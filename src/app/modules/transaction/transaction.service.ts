@@ -1,68 +1,34 @@
-import { SortOrder } from "mongoose";
-import { calculatePagination } from "../../../helper/paginatinHelper";
 import Transaction from "./transaction.model";
 
-type ITransactionFilters = {
-    searchTerm?: string;
-};
+export const getTransactionsFromDB = async (query: any) => {
+    // sort should look like this: { "field": "userId", "sort": "desc"}
+    const { page = 1, pageSize = 20, sort = null, search = "" } = query;
+    console.log(pageSize, search);
 
-type IPriceFilters = {
-    max?: number;
-    min?: number;
-};
+    // formatted sort should look like { userId: -1 }
+    const generateSort = () => {
+        const sortParsed = JSON.parse(sort);
+        const sortFormatted = {
+            [sortParsed.field]: (sortParsed.sort = "asc" ? 1 : -1),
+        };
 
-type IPaginationOptions = {
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortOrder?: "asc" | "desc";
-};
-export const getTransactionsFromDB = async (
-    filters: ITransactionFilters,
-    paginationOptions: IPaginationOptions,
-    filterByPrice: IPriceFilters
-) => {
-    const { searchTerm, ...filtersData } = filters;
-    const transactionSearchableFields = ["hello"];
-    const { max, min } = filterByPrice;
+        return sortFormatted;
+    };
+    const sortFormatted: any = Boolean(sort) ? generateSort() : {};
 
-    const andConditions = [];
-    // searching
-    if (searchTerm) {
-        andConditions.push({
-            $or: transactionSearchableFields.map((field) => ({
-                [field]: {
-                    $regex: searchTerm,
-                    $options: "i",
-                },
-            })),
-        });
-    }
-    // filtering
+    const transactions = await Transaction.find({
+        $or: [
+            { cost: { $regex: new RegExp(search, "i") } },
+            { userId: { $regex: new RegExp(search, "i") } },
+        ],
+    })
+        .sort(sortFormatted)
+        .skip(page * pageSize)
+        .limit(pageSize);
 
-    if (Object.keys(filtersData).length) {
-        andConditions.push({
-            $and: Object.entries(filtersData).map(([field, value]) => ({
-                [field]: value,
-            })),
-        });
-    }
+    const total = await Transaction.countDocuments();
+    console.log(total);
+    if (!transactions) throw new Error("Failed to find transactions!");
 
-    const whereConditions =
-        andConditions.length > 0 ? { $and: andConditions } : {};
-    // pagination
-
-    const { page, limit, skip, sortBy, sortOrder } =
-        calculatePagination(paginationOptions);
-
-    const sortConditions: { [key: string]: SortOrder } = {};
-    if (sortBy && sortOrder) {
-        sortConditions[sortBy] = sortOrder;
-    }
-    const transactions = await Transaction.find(whereConditions)
-        .sort(sortConditions)
-        .skip(skip)
-        .limit(limit);
-
-    return transactions;
+    return { total, transactions };
 };

@@ -1,16 +1,11 @@
 import { RequestHandler } from "express";
-import { getUsersFromDB } from "./client.service";
+import { getGeographyFromDB } from "./client.service";
 
-export const getUsers: RequestHandler = async (req, res, next) => {
+export const getGeography: RequestHandler = async (req, res, next) => {
     try {
-        const result = await getUsersFromDB();
+        const result = await getGeographyFromDB();
 
-        // sendResponse<IUser[]>(res, {
-        //   success: true,
-        //   statusCode: httpStatus.OK,
-        //   message: 'Users are retrieved successfully',
-        //   data: result,
-        // });
+        res.status(200).json(result);
     } catch (err) {
         next(err);
     }
